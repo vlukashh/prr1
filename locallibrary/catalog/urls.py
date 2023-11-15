@@ -10,7 +10,7 @@ urlpatterns = [
 
 ]
 urlpatterns += [
-    path('mybooks/', views.LoanedBooksAllListView.as_view(), name='my-borrowed'),
+    path('mybooks/', views.LoanedBooksByUserListView.as_view(), name='my-borrowed'),
 ]
 
 urlpatterns += [
