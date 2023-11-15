@@ -14,22 +14,22 @@ from catalog.forms import RenewBookForm
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import Author
+from django.contrib.auth.mixins import LoginRequiredMixin
+
 
 def index(request):
     """
     Функция отображения для домашней страницы сайта.
     """
     # Генерация "количеств" некоторых главных объектов
-    num_books=Book.objects.all().count()
-    num_instances=BookInstance.objects.all().count()
+    num_books = Book.objects.filter(title__icontains='п')
+    num_instances = BookInstance.objects.all().count()
     # Доступные книги (статус = 'a')
-    num_instances_available=BookInstance.objects.filter(status__exact='a').count()
-    num_authors=Author.objects.count()  # Метод 'all()' применён по умолчанию.
+    num_instances_available = BookInstance.objects.filter(status__exact='a').count()
+    num_authors = Author.objects.count()  # Метод 'all()' применён по умолчанию.
 
     num_visits = request.session.get('num_visits', 0)
     request.session['num_visits'] = num_visits + 1
-
-
 
     # Отрисовка HTML-шаблона index.html с данными внутри
     # переменной контекста context
@@ -42,48 +42,53 @@ def index(request):
     )
 
 
-
 class BookListView(generic.ListView):
     model = Book
     paginate_by = 3
 
 
 class BookDetailView(generic.DetailView):
-        model = Book
+    model = Book
+
 
 class AuthorListView(generic.ListView):
     """Generic class-based list view for a list of authors."""
     model = Author
     paginate_by = 10
 
+
 class AuthorDetailView(generic.DetailView):
     """Generic class-based detail view for an author."""
     model = Author
 
-    from django.contrib.auth.mixins import LoginRequiredMixin
 
 class LoanedBooksAllListView(PermissionRequiredMixin, generic.ListView):
     model = BookInstance
     permission_required = 'catalog.can_mark_returned'
     template_name = 'catalog/bookinstance_list_borrowed_all.html'
     paginate_by = 10
+
     def get_queryset(self):
         return BookInstance.objects.filter(status__exact='o').order_by('due_back')
+
 
 class BookInstanceUpdate(PermissionRequiredMixin, UpdateView):
     model = BookInstance
     fields = ['imprint', 'due_back', 'borrower', 'status']
     permission_required = 'catalog.change_bookinstance'
 
+
 class BookInstanceDelete(PermissionRequiredMixin, DeleteView):
     model = BookInstance
     success_url = reverse_lazy('bookinstances')
     permission_required = 'catalog.delete_bookinstance'
 
+
 class BookInstanceCreate(PermissionRequiredMixin, CreateView):
     model = BookInstance
     fields = ['book', 'imprint', 'due_back', 'borrower', 'status']
     permission_required = 'catalog.add_bookinstance'
+
 
 @login_required
 @permission_required('catalog.can_mark_returned', raise_exception=True)
@@ -125,11 +130,13 @@ class AuthorCreate(PermissionRequiredMixin, CreateView):
     initial = {'date_of_death': '11/11/2023'}
     permission_required = 'catalog.add_author'
 
+
 class AuthorUpdate(PermissionRequiredMixin, UpdateView):
     model = Author
     # Not recommended (potential security issue if more fields added)
     fields = '__all__'
     permission_required = 'catalog.change_author'
+
 
 class AuthorDelete(PermissionRequiredMixin, DeleteView):
     model = Author
@@ -143,4 +150,31 @@ class AuthorDelete(PermissionRequiredMixin, DeleteView):
         except Exception as e:
             return HttpResponseRedirect(
                 reverse("author-delete", kwargs={"pk": self.object.pk})
+            )
+
+
+class BookCreate(PermissionRequiredMixin, CreateView):
+    model = Book
+    fields = ['title', 'author', 'summary', 'isbn', 'genre']
+    permission_required = 'catalog.add_book'
+
+
+class BookUpdate(PermissionRequiredMixin, UpdateView):
+    model = Book
+    fields = ['title', 'author', 'summary', 'isbn', 'genre']
+    permission_required = 'catalog.change_book'
+
+
+class BookDelete(PermissionRequiredMixin, DeleteView):
+    model = Book
+    success_url = reverse_lazy('books')
+    permission_required = 'catalog.delete_book'
+
+    def form_valid(self, form):
+        try:
+            self.object.delete()
+            return HttpResponseRedirect(self.success_url)
+        except Exception as e:
+            return HttpResponseRedirect(
+                reverse("book-delete", kwargs={"pk": self.object.pk})
             )

@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from datetime import date
+from django.urls import reverse
 
 # Create your models here.
 class Genre(models.Model):
@@ -15,7 +16,7 @@ class Genre(models.Model):
         """
         return self.name
 
-from django.urls import reverse #Used to generate URLs by reversing the URL patterns
+ #Used to generate URLs by reversing the URL patterns
 
 class Book(models.Model):
     """
